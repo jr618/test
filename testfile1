@@ -1,0 +1,35 @@
+- block:
+    - name: ENSURE OS IS CORRECT
+      nxos_install_os:
+        system_image_file: "{{ nxos_version }}"
+        provider: "{{ nxos_provider }}"
+  rescue:
+    - name: WAITING FOR DEVICE TO PERFORM ALL UPGRADE CHECKS AND STARTS REBOOT
+      wait_for:
+        port: 22
+        state: stopped
+        timeout: 300
+        delay: 60
+        host: "{{ inventory_hostname }}"
+
+    - name: REBOOT IN PROGRESS - WAITING FOR DEVICE TO COME BACK ONLINE
+      wait_for:
+        port: 22
+        state: started
+        timeout: 300
+        delay: 60
+        host: "{{ inventory_hostname }}"
+
+  always:
+
+    - name: GATHER FACTS TO RECORD CURRENT VERSION OF NX-OS
+      nxos_facts:
+        provider: "{{ nxos_provider }}"
+
+    - name: CURRENT OS VERSION
+      debug: var=os
+
+    - name: VERIFY CURRENT VERSION IS EXPECTED VERSION
+      assert:
+        that:
+          - "'{{ os }}' == '{{ nxos_version_str }}'"
